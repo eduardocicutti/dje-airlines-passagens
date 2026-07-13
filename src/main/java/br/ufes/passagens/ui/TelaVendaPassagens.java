@@ -139,11 +139,13 @@ public final class TelaVendaPassagens extends JFrame {
         super("DJE Airlines");
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(1120, 720));
-        setLocationRelativeTo(null);
+        setPreferredSize(new Dimension(1180, 760));
         aplicarEstilo();
         montarTela();
         carregarAeroportos();
         etapas.show(painelEtapas, "origem");
+        pack();
+        setLocationRelativeTo(null);
     }
 
     private void aplicarEstilo() {
@@ -264,7 +266,8 @@ public final class TelaVendaPassagens extends JFrame {
     private JPanel etapaAssentos() {
         JPanel painel = painelBase("Assento", "Escolha no mapa do avião. Verdes estão livres; vermelhos já foram ocupados.");
         painelAssentos.setOpaque(false);
-        painel.add(painelAssentos, BorderLayout.CENTER);
+        JScrollPane scroll = scrollLimpo(painelAssentos);
+        painel.add(scroll, BorderLayout.CENTER);
         painel.add(barraBotoes("Voltar", () -> etapas.show(painelEtapas, "voos"),
                 "Confirmar assento", this::confirmarAssento), BorderLayout.SOUTH);
         return painel;
@@ -298,22 +301,29 @@ public final class TelaVendaPassagens extends JFrame {
         c.gridy = 6;
         conteudo.add(painelCartao, c);
 
-        JButton recalcular = botaoSecundario("Recalcular valor");
-        recalcular.addActionListener(evento -> recalcularPassagem());
-        JButton confirmar = botaoPrimario("Confirmar pagamento");
-        confirmar.addActionListener(evento -> confirmarPagamento());
-        JPanel acoes = new JPanel(new GridLayout(1, 2, 8, 8));
-        acoes.setOpaque(false);
-        acoes.add(recalcular);
-        acoes.add(confirmar);
-        c.gridy = 7;
-        conteudo.add(acoes, c);
-
-        painel.add(conteudo, BorderLayout.NORTH);
-        painel.add(barraBotoes("Voltar", () -> etapas.show(painelEtapas, "assentos"),
-                null, null), BorderLayout.SOUTH);
+        painel.add(scrollLimpo(conteudo), BorderLayout.CENTER);
+        painel.add(barraPagamento(), BorderLayout.SOUTH);
         atualizarCamposPagamento();
         return painel;
+    }
+
+    private JPanel barraPagamento() {
+        JPanel barra = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        barra.setOpaque(false);
+
+        JButton voltar = botaoSecundario("Voltar");
+        voltar.addActionListener(evento -> etapas.show(painelEtapas, "assentos"));
+
+        JButton recalcular = botaoSecundario("Recalcular valor");
+        recalcular.addActionListener(evento -> recalcularPassagem());
+
+        JButton confirmar = botaoPrimario("Confirmar pagamento");
+        confirmar.addActionListener(evento -> confirmarPagamento());
+
+        barra.add(voltar);
+        barra.add(recalcular);
+        barra.add(confirmar);
+        return barra;
     }
 
     private JPanel etapaETicket() {
@@ -372,6 +382,16 @@ public final class TelaVendaPassagens extends JFrame {
                 BorderFactory.createLineBorder(BORDA),
                 BorderFactory.createEmptyBorder(18, 18, 18, 18)));
         return painel;
+    }
+
+    private JScrollPane scrollLimpo(Component conteudo) {
+        JScrollPane scroll = new JScrollPane(conteudo);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setBackground(CARTAO);
+        scroll.getViewport().setBackground(CARTAO);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        return scroll;
     }
 
     private JPanel barraBotoes(String textoVoltar, Runnable voltar, String textoAvancar, Runnable avancar) {
