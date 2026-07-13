@@ -1,6 +1,5 @@
 # Autores
 
-- Eduardo
-- Daniel
-- José
-
+- Eduardo Cicutti
+- Daniel Mendes
+- José Antônio da Silva

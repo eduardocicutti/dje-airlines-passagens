@@ -1,153 +1,155 @@
-# DJE Airlines - venda de passagens aéreas
+# DJE Airlines - Venda de Passagens Aereas
 
-Projeto Java 17 com Swing, Maven, MySQL e OpenPDF para o trabalho final de POO/PROG III da UFES.
+Sistema desktop em Java para venda de passagens aereas, desenvolvido como trabalho final da disciplina de Programacao Orientada a Objetos.
+
+O projeto usa Java Swing para a interface, MySQL para persistencia, Maven para gerenciamento de dependencias e OpenPDF para geracao do e-ticket.
 
 ## Autores
 
-- Eduardo
-- Daniel
-- José
+- Eduardo Cicutti
+- Daniel Mendes
+- José Antônio da Silva
 
-## Estado atual
+## Funcionalidades
 
-O sistema já está integrado ao MySQL e possui:
+- Cadastro inicial de aeroportos, rotas, voos, conexoes e assentos via script SQL.
+- Consulta de voos disponiveis por origem e destino.
+- Fluxo Swing em cinco etapas:
+  - origem e destino;
+  - voo e horario;
+  - assento;
+  - passageiro e pagamento;
+  - e-ticket.
+- Calculo de preco com base nas regras fornecidas no enunciado.
+- Pagamento em dinheiro, credito ou debito, com heranca e polimorfismo.
+- Gravacao completa da venda em banco MySQL.
+- Bloqueio de venda duplicada para o mesmo assento.
+- Geracao de PDF do e-ticket.
+- Envio do e-ticket em uma tarefa paralela.
 
-- estrutura Maven em `src/main/java`;
-- modelos encapsulados e hierarquia polimórfica de pagamentos;
-- algoritmo de preços do professor com `BigDecimal`;
-- Connector/J e OpenPDF configurados no Maven;
-- configuração JDBC sem senha versionada;
-- métodos `Conectar`, `InserirDadosNoMySQL` e `Desconectar`;
-- schema e dados iniciais idempotentes;
-- testes unitários das regras principais;
-- envio de arquivo implementado como cópia real para diretório configurável;
-- tela Swing inicial de venda em 5 etapas ligada ao MySQL.
+## Tecnologias
 
-O checkpoint atual é a validação final pelo NetBeans e por uma venda de demonstração na interface.
+- Java 17
+- Java Swing
+- Maven
+- MySQL
+- MySQL Connector/J
+- OpenPDF
+- JUnit 5
 
-## Pré-requisitos pedidos pelo professor
+## Estrutura
 
-1. Java JDK 17.
-2. Apache Maven (ou o Maven integrado ao NetBeans).
-3. NetBeans com suporte a projetos Maven.
-4. Microsoft Visual C++ Redistributable compatível.
-5. MySQL Server, usando a configuração **Server only** do instalador.
-6. MySQL Command Line Client.
-7. MySQL Connector/J.
+```text
+database/
+  schema.sql
+  seed.sql
+docs/
+  verificacao-requisitos.md
+src/main/java/br/ufes/passagens/
+  config/
+  model/
+  repository/
+  service/
+  ui/
+  util/
+src/test/java/br/ufes/passagens/
+```
 
-O Connector/J está declarado no `pom.xml` como `com.mysql:mysql-connector-j:9.7.0`, conforme as coordenadas oficiais. Ao abrir o projeto Maven no NetBeans, ele aparecerá em Dependencies. Se for necessário demonstrar exatamente o procedimento do PDF do professor, baixe o Connector/J em <https://dev.mysql.com/downloads/connector/j/>, extraia o JAR e use `Libraries/Dependencies > Add JAR/Folder` no NetBeans. Não copie o JAR para este repositório.
+## Banco de Dados
 
-Não use XAMPP ou phpMyAdmin como procedimento principal deste trabalho.
+O banco usado pelo sistema se chama `dje_airlines`.
 
-## Criar a base de dados
+As principais tabelas sao:
 
-Abra o MySQL Command Line Client, autentique-se e execute, trocando o caminho conforme o local do projeto:
+- `aeroportos`
+- `rotas`
+- `voos`
+- `voo_trechos`
+- `assentos`
+- `funcionarios`
+- `passageiros`
+- `pagamentos`
+- `vendas`
+- `etickets`
+
+Para criar e popular a base:
 
 ```sql
-SOURCE C:/Users/eduardo/Desktop/passagens/database/schema.sql;
-SOURCE C:/Users/eduardo/Desktop/passagens/database/seed.sql;
+SOURCE caminho/do/projeto/database/schema.sql;
+SOURCE caminho/do/projeto/database/seed.sql;
 ```
 
-Os scripts podem ser executados novamente sem duplicar aeroportos, rotas, voos ou assentos.
+O script inicial cadastra 8 aeroportos, 12 rotas, 3 voos e 180 assentos.
 
-O `seed.sql` contém somente as seis distâncias fornecidas pelo professor, nos dois sentidos. Porto Alegre e Rio de Janeiro são cadastrados, mas não recebem distâncias inventadas; uma venda sem distância conhecida deve ser bloqueada.
+## Configuracao Local
 
-Para conferir a carga inicial no MySQL Command Line Client:
+Copie o arquivo de exemplo:
 
-```sql
-USE dje_airlines;
-SHOW TABLES;
-SELECT COUNT(*) AS aeroportos FROM aeroportos;
-SELECT COUNT(*) AS rotas FROM rotas;
-SELECT COUNT(*) AS voos FROM voos;
-SELECT COUNT(*) AS assentos FROM assentos;
-SELECT codigo_iata, nome, cidade FROM aeroportos ORDER BY codigo_iata;
+```text
+src/main/resources/application.properties.example
 ```
 
-Resultado esperado nesta versão inicial: 8 aeroportos, 12 rotas, 3 voos e 180 assentos.
+para:
 
-## Configurar a conexão
+```text
+src/main/resources/application.properties
+```
 
-A forma recomendada é usar variáveis de ambiente no PowerShell:
+Depois ajuste os dados de conexao:
+
+```properties
+db.url=jdbc:mysql://localhost:3306/dje_airlines?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
+db.user=root
+db.password=sua-senha
+```
+
+O arquivo `application.properties` fica fora do Git por conter senha local.
+
+## Execucao
+
+Para compilar:
 
 ```powershell
-$env:DJE_DB_URL='jdbc:mysql://localhost:3306/dje_airlines?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true'
-$env:DJE_DB_USER='root'
-$env:DJE_DB_PASSWORD='sua-senha'
+mvn clean package
 ```
 
-Alternativamente, copie `src/main/resources/application.properties.example` para `src/main/resources/application.properties` e altere apenas a cópia local. Esse arquivo está ignorado e não deve ser compartilhado com senha real.
-
-## Testar a conexão
-
-Depois que o banco estiver criado:
+Para abrir a aplicacao:
 
 ```powershell
-mvn -q -DskipTests package
-mvn -q exec:java "-Dexec.mainClass=br.ufes.passagens.config.TesteConexao"
-mvn -q exec:java "-Dexec.mainClass=br.ufes.passagens.config.TesteConsultaVoos"
-mvn -q exec:java "-Dexec.mainClass=br.ufes.passagens.config.TesteVendaCompleta"
-mvn -q exec:java "-Dexec.mainClass=br.ufes.passagens.config.TesteResumoBanco"
+mvn exec:java "-Dexec.mainClass=br.ufes.App"
 ```
 
-Se os comandos `exec:java` não estiverem disponíveis no NetBeans, execute as classes `TesteConexao`, `TesteConsultaVoos`, `TesteVendaCompleta` e `TesteResumoBanco` diretamente pela IDE.
+Tambem e possivel executar a classe `br.ufes.App` diretamente pelo NetBeans.
 
-Para abrir a aplicação Swing:
+## Rotas de Demonstracao
+
+O `seed.sql` inclui os seguintes voos:
+
+- `DJE101`: `FLN -> CGH -> BSB`
+- `DJE202`: `CGH -> VIX`
+- `DJE303`: `CGH -> FOR`
+
+Para pagamento em dinheiro, a matricula inicial cadastrada e `1001`.
+
+## Testes
+
+Para executar os testes unitarios:
 
 ```powershell
-mvn -q exec:java "-Dexec.mainClass=br.ufes.App"
+mvn test
 ```
 
-Erros comuns:
+Classes auxiliares para validacao manual:
 
-- `Communications link failure`: serviço MySQL parado, host ou porta incorretos.
-- `Access denied`: usuário ou senha incorretos.
-- `Unknown database 'dje_airlines'`: `schema.sql` ainda não foi executado.
-- `Public Key Retrieval is not allowed`: confirme que a URL é a do exemplo.
-- caracteres sem acento: confirme UTF-8/`utf8mb4` e não altere a codificação dos scripts.
+- `TesteConexao`
+- `TesteConsultaVoos`
+- `TesteVendaCompleta`
+- `TesteResumoBanco`
 
-## Compilar e testar sem MySQL
+## Observacoes
 
-Os testes unitários não exigem banco ativo:
-
-```powershell
-mvn clean test
-mvn package
-```
-
-## Aplicação Swing
-
-Abra a tela principal pelo NetBeans executando `br.ufes.App`, ou pelo PowerShell:
-
-```powershell
-mvn -q exec:java "-Dexec.mainClass=br.ufes.App"
-```
-
-Fluxos de demonstração já cadastrados:
-
-- `FLN -> BSB`, voo `DJE101`, com conexão `FLN -> CGH -> BSB`;
-- `CGH -> VIX`, voo `DJE202`;
-- `CGH -> FOR`, voo `DJE303`.
-
-Para pagamento em dinheiro, use a matrícula `1001`, previamente cadastrada em `seed.sql`.
-
-## Servidor de e-tickets
-
-Os PDFs são gerados em `output/etickets/`. Após a geração, uma thread copia o PDF para o destino configurado por `DJE_SERVER_DIR`. Se a variável não existir, o destino local de demonstração será `output/servidor/`.
-
-`DJE_SERVER_DIR` pode ser uma pasta local de teste ou caminho UNC da rede:
-
-```powershell
-$env:DJE_SERVER_DIR='\\servidor\etickets'
-```
-
-O resultado do envio é persistido na tabela `etickets`, em `estado_envio` e `enviado_em`.
-
-## Arquivos principais
-
-- `database/schema.sql`: estrutura relacional e restrições.
-- `database/seed.sql`: aeroportos, distâncias, voos, conexão e assentos de demonstração.
-- `src/main/java/br/ufes/passagens/config`: propriedades e conexão JDBC.
-- `src/main/java/br/ufes/passagens/model`: domínio e pagamentos.
-- `src/main/java/br/ufes/passagens/service`: preço e validações.
-- `PLANO_IMPLEMENTACAO_CODEX.md`: especificação integral das próximas etapas.
+- As distancias seguem os valores fornecidos no enunciado.
+- Porto Alegre e Rio de Janeiro estao cadastrados, mas nao possuem rotas comerciais iniciais porque o material base nao fornece suas distancias.
+- O sistema nao salva CVV nem numero completo de cartao.
+- Os PDFs gerados ficam em `output/etickets/`.
+- O envio de e-ticket usa `DJE_SERVER_DIR` quando configurado; caso contrario usa `output/servidor/`.
