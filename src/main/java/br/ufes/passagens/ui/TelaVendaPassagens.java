@@ -80,6 +80,8 @@ public final class TelaVendaPassagens extends JFrame {
     private static final Color BORDA = new Color(0xCBD5E0);
     private static final Color VERDE = new Color(0xDFF7E8);
     private static final Color VERMELHO = new Color(0xF8D7DA);
+    private static final Color VERDE_FORTE = new Color(0x10B981);
+    private static final Color LILAS = new Color(0xA78BFA);
     private static final Font FONTE = new Font("Segoe UI", Font.PLAIN, 14);
     private static final Font FONTE_NEGRITO = new Font("Segoe UI", Font.BOLD, 14);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -104,6 +106,7 @@ public final class TelaVendaPassagens extends JFrame {
     private final CardLayout etapas = new CardLayout();
     private final JPanel painelEtapas = new JPanel(etapas);
     private final PainelResumo painelResumo = new PainelResumo();
+    private final JPanel painelPrecoCheckout = new PainelPrecoCheckout();
 
     private final JComboBox<Aeroporto> comboOrigem = new JComboBox<>();
     private final JComboBox<Aeroporto> comboDestino = new JComboBox<>();
@@ -266,11 +269,44 @@ public final class TelaVendaPassagens extends JFrame {
     private JPanel etapaAssentos() {
         JPanel painel = painelBase("Assento", "Escolha no mapa do avião. Verdes estão livres; vermelhos já foram ocupados.");
         painelAssentos.setOpaque(false);
-        JScrollPane scroll = scrollLimpo(painelAssentos);
-        painel.add(scroll, BorderLayout.CENTER);
+        JPanel area = new JPanel(new BorderLayout(18, 0));
+        area.setOpaque(false);
+        area.add(scrollLimpo(painelAssentos), BorderLayout.CENTER);
+        area.add(painelAssentosLateral(), BorderLayout.EAST);
+        painel.add(area, BorderLayout.CENTER);
         painel.add(barraBotoes("Voltar", () -> etapas.show(painelEtapas, "voos"),
                 "Confirmar assento", this::confirmarAssento), BorderLayout.SOUTH);
         return painel;
+    }
+
+    private JPanel painelAssentosLateral() {
+        JPanel lateral = new JPanel(new GridLayout(0, 1, 0, 12));
+        lateral.setOpaque(false);
+        lateral.setPreferredSize(new Dimension(230, 0));
+
+        JPanel legenda = miniCard("Legenda");
+        legenda.add(itemLegenda(VERDE, "Disponível"), BorderLayout.CENTER);
+        JPanel legendaExtra = new JPanel(new GridLayout(0, 1, 6, 6));
+        legendaExtra.setOpaque(false);
+        legendaExtra.add(itemLegenda(new Color(0x90CDF4), "Selecionado"));
+        legendaExtra.add(itemLegenda(VERMELHO, "Ocupado"));
+        legendaExtra.add(itemLegenda(LILAS, "Corredor"));
+        legenda.add(legendaExtra, BorderLayout.SOUTH);
+
+        JPanel resumo = miniCard("Resumo do assento");
+        JLabel texto = new JLabel("""
+                <html>
+                <p>Escolha uma poltrona no mapa.</p>
+                <p>O assento selecionado aparece no cartão de embarque ao lado.</p>
+                </html>
+                """);
+        texto.setFont(FONTE);
+        texto.setForeground(TEXTO);
+        resumo.add(texto, BorderLayout.CENTER);
+
+        lateral.add(legenda);
+        lateral.add(resumo);
+        return lateral;
     }
 
     private JPanel etapaPagamento() {
@@ -279,10 +315,11 @@ public final class TelaVendaPassagens extends JFrame {
         conteudo.setOpaque(false);
         GridBagConstraints c = baseConstraints();
 
-        adicionarCampo(conteudo, c, 0, "Nome do passageiro", campoNome);
-        adicionarCampo(conteudo, c, 1, "Documento", campoDocumento);
-        adicionarCampo(conteudo, c, 2, "Retorno opcional", painelRetorno());
-        adicionarCampo(conteudo, c, 3, "Valor total", campoValor);
+        adicionarFaixa(conteudo, c, 0, "Dados do passageiro");
+        adicionarCampo(conteudo, c, 1, "Nome do passageiro", campoNome);
+        adicionarCampo(conteudo, c, 2, "Documento", campoDocumento);
+        adicionarCampo(conteudo, c, 3, "Retorno opcional", painelRetorno());
+        adicionarCampo(conteudo, c, 4, "Valor total", campoValor);
 
         JPanel formas = new JPanel(new GridLayout(1, 3, 8, 8));
         formas.setOpaque(false);
@@ -290,18 +327,25 @@ public final class TelaVendaPassagens extends JFrame {
         formas.add(radioCredito);
         formas.add(radioDebito);
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 5;
         c.gridwidth = 2;
         c.fill = GridBagConstraints.HORIZONTAL;
+        adicionarFaixa(conteudo, c, 5, "Método de pagamento");
+        c.gridy = 6;
         conteudo.add(formas, c);
 
         montarPagamento();
-        c.gridy = 5;
+        c.gridy = 7;
         conteudo.add(painelDinheiro, c);
-        c.gridy = 6;
+        c.gridy = 8;
         conteudo.add(painelCartao, c);
 
-        painel.add(scrollLimpo(conteudo), BorderLayout.CENTER);
+        JPanel checkout = new JPanel(new BorderLayout(18, 0));
+        checkout.setOpaque(false);
+        checkout.add(scrollLimpo(conteudo), BorderLayout.CENTER);
+        checkout.add(painelPrecoLateral(), BorderLayout.EAST);
+
+        painel.add(checkout, BorderLayout.CENTER);
         painel.add(barraPagamento(), BorderLayout.SOUTH);
         atualizarCamposPagamento();
         return painel;
@@ -366,13 +410,38 @@ public final class TelaVendaPassagens extends JFrame {
         JLabel s = new JLabel(subtitulo);
         s.setFont(FONTE);
         s.setForeground(CINZA);
-        cab.add(t, BorderLayout.NORTH);
-        cab.add(s, BorderLayout.SOUTH);
+        JPanel textos = new JPanel(new BorderLayout());
+        textos.setOpaque(false);
+        textos.add(t, BorderLayout.NORTH);
+        textos.add(s, BorderLayout.SOUTH);
+        cab.add(textos, BorderLayout.CENTER);
+        cab.add(etapasCompra(), BorderLayout.EAST);
 
         JPanel conteudo = card();
         conteudo.add(cab, BorderLayout.NORTH);
         externo.add(conteudo, BorderLayout.CENTER);
         return conteudo;
+    }
+
+    private JPanel etapasCompra() {
+        JPanel painel = new JPanel(new GridLayout(1, 3, 8, 0));
+        painel.setOpaque(false);
+        painel.add(chipEtapa("1 Reserva", true));
+        painel.add(chipEtapa("2 Compra", true));
+        painel.add(chipEtapa("3 E-ticket", false));
+        return painel;
+    }
+
+    private JLabel chipEtapa(String texto, boolean ativo) {
+        JLabel chip = new JLabel(texto);
+        chip.setOpaque(true);
+        chip.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        chip.setForeground(ativo ? new Color(0x065F46) : CINZA);
+        chip.setBackground(ativo ? new Color(0xD1FAE5) : new Color(0xF7FAFC));
+        chip.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ativo ? new Color(0x6EE7B7) : new Color(0xE2E8F0)),
+                BorderFactory.createEmptyBorder(7, 10, 7, 10)));
+        return chip;
     }
 
     private JPanel card() {
@@ -384,6 +453,24 @@ public final class TelaVendaPassagens extends JFrame {
         return painel;
     }
 
+    private JPanel miniCard(String titulo) {
+        JPanel painel = new JPanel(new BorderLayout(10, 10));
+        painel.setBackground(CARTAO);
+        painel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xE2E8F0)),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+        JLabel label = new JLabel(titulo);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        label.setForeground(TEXTO);
+        painel.add(label, BorderLayout.NORTH);
+        return painel;
+    }
+
+    private JPanel painelPrecoLateral() {
+        painelPrecoCheckout.setPreferredSize(new Dimension(240, 0));
+        return painelPrecoCheckout;
+    }
+
     private JScrollPane scrollLimpo(Component conteudo) {
         JScrollPane scroll = new JScrollPane(conteudo);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -392,6 +479,35 @@ public final class TelaVendaPassagens extends JFrame {
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         return scroll;
+    }
+
+    private void adicionarFaixa(JPanel painel, GridBagConstraints c, int linha, String texto) {
+        JLabel label = new JLabel(texto);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        label.setForeground(AZUL);
+        label.setBorder(BorderFactory.createEmptyBorder(linha == 0 ? 0 : 14, 0, 2, 0));
+        c.gridx = 0;
+        c.gridy = linha;
+        c.gridwidth = 2;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        painel.add(label, c);
+    }
+
+    private JPanel itemLegenda(Color cor, String texto) {
+        JPanel painel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        painel.setOpaque(false);
+        JLabel marcador = new JLabel();
+        marcador.setOpaque(true);
+        marcador.setBackground(cor);
+        marcador.setPreferredSize(new Dimension(16, 16));
+        marcador.setBorder(BorderFactory.createLineBorder(new Color(0xCBD5E0)));
+        JLabel label = new JLabel(texto);
+        label.setFont(FONTE);
+        label.setForeground(TEXTO);
+        painel.add(marcador);
+        painel.add(label);
+        return painel;
     }
 
     private JPanel barraBotoes(String textoVoltar, Runnable voltar, String textoAvancar, Runnable avancar) {
@@ -492,13 +608,14 @@ public final class TelaVendaPassagens extends JFrame {
 
     private JRadioButton radioPagamento(String texto) {
         JRadioButton radio = new JRadioButton(texto);
-        radio.setFont(FONTE_NEGRITO);
+        radio.setFont(new Font("Segoe UI", Font.BOLD, 15));
         radio.setForeground(AZUL);
         radio.setBackground(new Color(0xF7FAFC));
         radio.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDA),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+                BorderFactory.createEmptyBorder(14, 16, 14, 16)));
         radio.setFocusPainted(false);
+        radio.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return radio;
     }
 
@@ -602,6 +719,7 @@ public final class TelaVendaPassagens extends JFrame {
             listaVoos.setSelectedIndex(0);
             etapas.show(painelEtapas, "voos");
             painelResumo.atualizarRota(origem, destino, null, null);
+            painelPrecoCheckout.repaint();
         } catch (SQLException | IllegalArgumentException e) {
             mostrarErro("Falha ao buscar voos.", e);
         }
@@ -614,6 +732,7 @@ public final class TelaVendaPassagens extends JFrame {
             return;
         }
         painelResumo.atualizarRota(vooSelecionado.getOrigem(), vooSelecionado.getDestino(), vooSelecionado, null);
+        painelPrecoCheckout.repaint();
         carregarAssentos();
         etapas.show(painelEtapas, "assentos");
     }
@@ -735,6 +854,7 @@ public final class TelaVendaPassagens extends JFrame {
         assentoSelecionado = selecionado.isSelected() ? assento : null;
         selecionado.setBackground(assentoSelecionado == null ? VERDE : new Color(0x90CDF4));
         painelResumo.atualizarRota(vooSelecionado.getOrigem(), vooSelecionado.getDestino(), vooSelecionado, assentoSelecionado);
+        painelPrecoCheckout.repaint();
     }
 
     private void confirmarAssento() {
@@ -755,6 +875,7 @@ public final class TelaVendaPassagens extends JFrame {
             BigDecimal valor = calculadora.calcularValorTotal(passagemAtual);
             campoValor.setText(MOEDA.format(valor));
             atualizarSimulacaoParcelas();
+            painelPrecoCheckout.repaint();
         } catch (RuntimeException e) {
             mostrarErro("Não foi possível calcular o valor.", e);
         }
@@ -885,6 +1006,7 @@ public final class TelaVendaPassagens extends JFrame {
         campoParcelas.setValue(1);
         atualizarSimulacaoParcelas();
         painelResumo.limpar();
+        painelPrecoCheckout.repaint();
         etapas.show(painelEtapas, "origem");
     }
 
@@ -958,6 +1080,67 @@ public final class TelaVendaPassagens extends JFrame {
                 g2.drawString(nome.length() > 4 ? nome.substring(0, 4) : nome, x + 10, y + 18);
             }
             g2.dispose();
+        }
+    }
+
+    private final class PainelPrecoCheckout extends JPanel {
+        private PainelPrecoCheckout() {
+            setBackground(CARTAO);
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(0xE2E8F0)),
+                    BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int x = 14;
+            int largura = getWidth() - 28;
+
+            g2.setColor(AZUL);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 17));
+            g2.drawString("Detalhes", x, 22);
+
+            int y = 60;
+            String rota = vooSelecionado == null ? "Selecione um voo" :
+                    vooSelecionado.getOrigem().getCodigoIata() + " → " + vooSelecionado.getDestino().getCodigoIata();
+            desenharLinhaResumo(g2, "Rota", rota, x, y);
+            y += 42;
+
+            String voo = vooSelecionado == null ? "--" : vooSelecionado.getCodigo();
+            desenharLinhaResumo(g2, "Voo", voo, x, y);
+            y += 42;
+
+            String assento = assentoSelecionado == null ? "--" : assentoSelecionado.codigo();
+            desenharLinhaResumo(g2, "Assento", assento, x, y);
+            y += 42;
+
+            g2.setColor(new Color(0xE2E8F0));
+            g2.drawLine(x, y, x + largura - 18, y);
+            y += 32;
+
+            BigDecimal valor = valorAtual();
+            String total = valor.compareTo(BigDecimal.ZERO) <= 0 ? "--" : MOEDA.format(valor);
+            desenharLinhaResumo(g2, "Total", total, x, y);
+            y += 38;
+
+            g2.setColor(new Color(0xECFDF5));
+            g2.fillRoundRect(x, y, largura - 18, 46, 14, 14);
+            g2.setColor(VERDE_FORTE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            g2.drawString("Reagendamento disponível", x + 12, y + 28);
+            g2.dispose();
+        }
+
+        private void desenharLinhaResumo(Graphics2D g2, String titulo, String valor, int x, int y) {
+            g2.setColor(CINZA);
+            g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            g2.drawString(titulo, x, y);
+            g2.setColor(TEXTO);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            g2.drawString(valor, x, y + 20);
         }
     }
 
