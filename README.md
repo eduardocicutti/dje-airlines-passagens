@@ -4,9 +4,9 @@ Projeto Java 17 com Swing, Maven, MySQL e OpenPDF para o trabalho final de POO/P
 
 ## Autores
 
-- Eduardo
-- Daniel
-- José
+- Eduardo Cicutti
+- Daniel Mendes
+- José Antônio dos Santos
 
 ## Estado atual
 
