@@ -21,8 +21,10 @@ import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -33,9 +35,8 @@ import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.ListCellRenderer;
-import javax.swing.ImageIcon;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.SwingConstants;
+import javax.swing.SpinnerDateModel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
@@ -53,15 +54,20 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class TelaVendaPassagens extends JFrame {
@@ -77,7 +83,7 @@ public final class TelaVendaPassagens extends JFrame {
     private static final Font FONTE = new Font("Segoe UI", Font.PLAIN, 14);
     private static final Font FONTE_NEGRITO = new Font("Segoe UI", Font.BOLD, 14);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final String LOGO = "/imagens/logo-dje.png";
+    private static final NumberFormat MOEDA = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
 
     private static final Map<String, String> CIDADES = new HashMap<>();
     static {
@@ -98,17 +104,20 @@ public final class TelaVendaPassagens extends JFrame {
     private final CardLayout etapas = new CardLayout();
     private final JPanel painelEtapas = new JPanel(etapas);
     private final PainelResumo painelResumo = new PainelResumo();
-    private final Image logo = carregarLogo();
 
     private final JComboBox<Aeroporto> comboOrigem = new JComboBox<>();
     private final JComboBox<Aeroporto> comboDestino = new JComboBox<>();
     private final DefaultListModel<Voo> modeloVoos = new DefaultListModel<>();
     private final JList<Voo> listaVoos = new JList<>(modeloVoos);
-    private final JPanel painelAssentos = new JPanel(new GridLayout(10, 6, 8, 8));
+    private final JPanel painelAssentos = new JPanel(new GridBagLayout());
+    private final List<JToggleButton> botoesAssentos = new ArrayList<>();
 
     private final JTextField campoNome = new JTextField();
     private final JTextField campoDocumento = new JTextField();
-    private final JTextField campoRetorno = new JTextField();
+    private final JCheckBox checkRetorno = new JCheckBox("Adicionar retorno");
+    private final JSpinner campoRetorno = new JSpinner(new SpinnerDateModel(
+            Date.from(LocalDate.now().plusDays(7).atStartOfDay(ZoneId.systemDefault()).toInstant()),
+            null, null, Calendar.DAY_OF_MONTH));
     private final JTextField campoValor = new JTextField();
     private final JRadioButton radioDinheiro = radioPagamento("Dinheiro");
     private final JRadioButton radioCredito = radioPagamento("Crédito");
@@ -117,8 +126,9 @@ public final class TelaVendaPassagens extends JFrame {
     private final JPanel painelCartao = painelCamposPagamento();
     private final JTextField campoMatricula = new JTextField("1001");
     private final JTextField campoCartao = new JTextField();
-    private final JTextField campoBandeira = new JTextField("VISA");
+    private final JComboBox<String> campoBandeira = new JComboBox<>(new String[]{"Visa", "Mastercard", "Elo", "Amex"});
     private final JSpinner campoParcelas = new JSpinner(new SpinnerNumberModel(1, 1, 12, 1));
+    private final JLabel simulacaoParcelas = new JLabel("Selecione crédito para simular parcelamento.");
     private final JLabel resumoFinal = new JLabel();
 
     private Voo vooSelecionado;
@@ -150,6 +160,15 @@ public final class TelaVendaPassagens extends JFrame {
                 rotuloLista(valor == null ? "" : formatarAeroporto(valor), selecionado));
         comboDestino.setRenderer((lista, valor, indice, selecionado, foco) ->
                 rotuloLista(valor == null ? "" : formatarAeroporto(valor), selecionado));
+        campoBandeira.setRenderer((lista, valor, indice, selecionado, foco) ->
+                rotuloBandeira(valor == null ? "" : valor, selecionado));
+        campoRetorno.setEditor(new JSpinner.DateEditor(campoRetorno, "dd/MM/yyyy"));
+        campoRetorno.setEnabled(false);
+        checkRetorno.setFont(FONTE_NEGRITO);
+        checkRetorno.setForeground(AZUL);
+        checkRetorno.setOpaque(false);
+        checkRetorno.addActionListener(evento -> campoRetorno.setEnabled(checkRetorno.isSelected()));
+        campoParcelas.addChangeListener(evento -> atualizarSimulacaoParcelas());
 
         ButtonGroup grupo = new ButtonGroup();
         grupo.add(radioDinheiro);
@@ -188,15 +207,9 @@ public final class TelaVendaPassagens extends JFrame {
         topo.setBackground(AZUL);
         topo.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
 
-        JLabel marca;
-        if (logo == null) {
-            marca = new JLabel("DJE AIRLINES");
-            marca.setForeground(Color.WHITE);
-            marca.setFont(new Font("Segoe UI", Font.BOLD, 28));
-        } else {
-            Image ajustada = logo.getScaledInstance(188, 76, Image.SCALE_SMOOTH);
-            marca = new JLabel(new ImageIcon(ajustada));
-        }
+        JLabel marca = new JLabel("DJE AIRLINES");
+        marca.setForeground(Color.WHITE);
+        marca.setFont(new Font("Segoe UI", Font.BOLD, 26));
 
         JLabel subtitulo = new JLabel("Venda de passagens aéreas");
         subtitulo.setForeground(new Color(0xBED5EF));
@@ -214,11 +227,6 @@ public final class TelaVendaPassagens extends JFrame {
         topo.add(textos, BorderLayout.WEST);
         topo.add(ticket, BorderLayout.EAST);
         return topo;
-    }
-
-    private Image carregarLogo() {
-        java.net.URL url = TelaVendaPassagens.class.getResource(LOGO);
-        return url == null ? null : new ImageIcon(url).getImage();
     }
 
     private JPanel etapaOrigemDestino() {
@@ -254,7 +262,7 @@ public final class TelaVendaPassagens extends JFrame {
     }
 
     private JPanel etapaAssentos() {
-        JPanel painel = painelBase("Assento", "Assentos verdes estão disponíveis; vermelhos já foram ocupados.");
+        JPanel painel = painelBase("Assento", "Escolha no mapa do avião. Verdes estão livres; vermelhos já foram ocupados.");
         painelAssentos.setOpaque(false);
         painel.add(painelAssentos, BorderLayout.CENTER);
         painel.add(barraBotoes("Voltar", () -> etapas.show(painelEtapas, "voos"),
@@ -270,7 +278,7 @@ public final class TelaVendaPassagens extends JFrame {
 
         adicionarCampo(conteudo, c, 0, "Nome do passageiro", campoNome);
         adicionarCampo(conteudo, c, 1, "Documento", campoDocumento);
-        adicionarCampo(conteudo, c, 2, "Retorno opcional (AAAA-MM-DD)", campoRetorno);
+        adicionarCampo(conteudo, c, 2, "Retorno opcional", painelRetorno());
         adicionarCampo(conteudo, c, 3, "Valor total", campoValor);
 
         JPanel formas = new JPanel(new GridLayout(1, 3, 8, 8));
@@ -329,9 +337,11 @@ public final class TelaVendaPassagens extends JFrame {
         painelDinheiro.removeAll();
         painelCartao.removeAll();
         painelDinheiro.add(linhaCampo("Matrícula do funcionário", campoMatricula));
+        painelDinheiro.add(avisoPagamento("Pagamento à vista no balcão."));
         painelCartao.add(linhaCampo("Número do cartão", campoCartao));
         painelCartao.add(linhaCampo("Bandeira", campoBandeira));
         painelCartao.add(linhaCampo("Parcelas", campoParcelas));
+        painelCartao.add(simulacaoParcelas);
     }
 
     private JPanel painelBase(String titulo, String subtitulo) {
@@ -405,6 +415,23 @@ public final class TelaVendaPassagens extends JFrame {
         painel.add(rotulo, BorderLayout.NORTH);
         painel.add(campo, BorderLayout.CENTER);
         return painel;
+    }
+
+    private JPanel painelRetorno() {
+        JPanel painel = new JPanel(new BorderLayout(10, 0));
+        painel.setOpaque(false);
+        estilizarCampo(campoRetorno);
+        painel.add(checkRetorno, BorderLayout.WEST);
+        painel.add(campoRetorno, BorderLayout.CENTER);
+        return painel;
+    }
+
+    private JLabel avisoPagamento(String texto) {
+        JLabel aviso = new JLabel(texto);
+        aviso.setFont(FONTE);
+        aviso.setForeground(CINZA);
+        aviso.setBorder(BorderFactory.createEmptyBorder(4, 2, 2, 2));
+        return aviso;
     }
 
     private JPanel painelCamposPagamento() {
@@ -513,6 +540,13 @@ public final class TelaVendaPassagens extends JFrame {
         return rotulo;
     }
 
+    private JLabel rotuloBandeira(String texto, boolean selecionado) {
+        JLabel rotulo = rotuloLista(texto, selecionado);
+        rotulo.setIcon(new BandeiraIcon(texto));
+        rotulo.setIconTextGap(10);
+        return rotulo;
+    }
+
     private void carregarAeroportos() {
         try {
             List<Aeroporto> aeroportos = dados.obterAeroportosPrincipais();
@@ -566,19 +600,14 @@ public final class TelaVendaPassagens extends JFrame {
 
     private void carregarAssentos() {
         painelAssentos.removeAll();
+        botoesAssentos.clear();
         assentoSelecionado = null;
         try {
+            Map<String, AssentoResumo> mapa = new HashMap<>();
             for (AssentoResumo assento : dados.obterAssentos(vooSelecionado.getId())) {
-                JToggleButton botao = new JToggleButton(assento.codigo());
-                botao.setFont(FONTE_NEGRITO);
-                botao.setEnabled(assento.disponivel());
-                botao.setBackground(assento.disponivel() ? VERDE : VERMELHO);
-                botao.setForeground(TEXTO);
-                botao.setFocusPainted(false);
-                botao.setBorder(BorderFactory.createLineBorder(assento.disponivel() ? new Color(0x9AE6B4) : new Color(0xFEB2B2)));
-                botao.addActionListener(evento -> selecionarAssento(botao, assento));
-                painelAssentos.add(botao);
+                mapa.put(assento.codigo(), assento);
             }
+            montarMapaAviao(mapa);
             painelAssentos.revalidate();
             painelAssentos.repaint();
         } catch (SQLException e) {
@@ -586,11 +615,101 @@ public final class TelaVendaPassagens extends JFrame {
         }
     }
 
+    private void montarMapaAviao(Map<String, AssentoResumo> assentos) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(5, 5, 5, 5);
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+
+        JLabel nariz = faixaAviao("DJE AIRLINES  •  CABINE");
+        c.gridx = 0;
+        c.gridy = 0;
+        c.gridwidth = 7;
+        painelAssentos.add(nariz, c);
+
+        String[] colunas = {"1", "2", "3", "", "4", "5", "6"};
+        c.gridy = 1;
+        c.gridwidth = 1;
+        for (int i = 0; i < colunas.length; i++) {
+            c.gridx = i;
+            painelAssentos.add(rotuloColuna(colunas[i]), c);
+        }
+
+        String[] filas = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"};
+        for (int linha = 0; linha < filas.length; linha++) {
+            String fila = filas[linha];
+            c.gridy = linha + 2;
+            adicionarAssentoMapa(assentos.get(fila + "1"), c, 0);
+            adicionarAssentoMapa(assentos.get(fila + "2"), c, 1);
+            adicionarAssentoMapa(assentos.get(fila + "3"), c, 2);
+            c.gridx = 3;
+            painelAssentos.add(corredor(linha), c);
+            adicionarAssentoMapa(assentos.get(fila + "4"), c, 4);
+            adicionarAssentoMapa(assentos.get(fila + "5"), c, 5);
+            adicionarAssentoMapa(assentos.get(fila + "6"), c, 6);
+        }
+
+        JLabel legenda = faixaAviao("Janela     Poltronas     Corredor     Poltronas     Janela");
+        c.gridx = 0;
+        c.gridy = 13;
+        c.gridwidth = 7;
+        painelAssentos.add(legenda, c);
+    }
+
+    private void adicionarAssentoMapa(AssentoResumo assento, GridBagConstraints c, int coluna) {
+        c.gridx = coluna;
+        c.gridwidth = 1;
+        if (assento == null) {
+            painelAssentos.add(new JLabel(), c);
+            return;
+        }
+        JToggleButton botao = new JToggleButton(assento.codigo());
+        botao.setPreferredSize(new Dimension(74, 42));
+        botao.setFont(FONTE_NEGRITO);
+        botao.setEnabled(assento.disponivel());
+        botao.setBackground(assento.disponivel() ? VERDE : VERMELHO);
+        botao.setForeground(TEXTO);
+        botao.setFocusPainted(false);
+        botao.setBorder(BorderFactory.createLineBorder(assento.disponivel() ? new Color(0x68D391) : new Color(0xFC8181)));
+        botao.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        botao.addActionListener(evento -> selecionarAssento(botao, assento));
+        botoesAssentos.add(botao);
+        painelAssentos.add(botao, c);
+    }
+
+    private JLabel rotuloColuna(String texto) {
+        JLabel rotulo = new JLabel(texto, JLabel.CENTER);
+        rotulo.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        rotulo.setForeground(CINZA);
+        return rotulo;
+    }
+
+    private JLabel corredor(int linha) {
+        JLabel label = new JLabel(linha == 4 ? "CORREDOR" : "│", JLabel.CENTER);
+        label.setFont(new Font("Segoe UI", Font.BOLD, linha == 4 ? 10 : 16));
+        label.setForeground(new Color(0xA0AEC0));
+        return label;
+    }
+
+    private JLabel faixaAviao(String texto) {
+        JLabel label = new JLabel(texto, JLabel.CENTER);
+        label.setOpaque(true);
+        label.setBackground(new Color(0xEBF4FF));
+        label.setForeground(AZUL);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xBEE3F8)),
+                BorderFactory.createEmptyBorder(9, 12, 9, 12)));
+        return label;
+    }
+
     private void selecionarAssento(JToggleButton selecionado, AssentoResumo assento) {
-        for (Component componente : painelAssentos.getComponents()) {
-            if (componente instanceof JToggleButton botao && botao != selecionado) {
+        for (JToggleButton botao : botoesAssentos) {
+            if (botao != selecionado) {
                 botao.setSelected(false);
-                botao.setBackground(VERDE);
+                if (botao.isEnabled()) {
+                    botao.setBackground(VERDE);
+                }
             }
         }
         assentoSelecionado = selecionado.isSelected() ? assento : null;
@@ -614,7 +733,8 @@ public final class TelaVendaPassagens extends JFrame {
                     campoDocumento.getText().isBlank() ? "TEMP" : campoDocumento.getText());
             passagemAtual = new Passagem(vooSelecionado, passageiro, assentoSelecionado.codigo(), lerRetorno());
             BigDecimal valor = calculadora.calcularValorTotal(passagemAtual);
-            campoValor.setText("R$ " + valor);
+            campoValor.setText(MOEDA.format(valor));
+            atualizarSimulacaoParcelas();
         } catch (RuntimeException e) {
             mostrarErro("Não foi possível calcular o valor.", e);
         }
@@ -635,13 +755,9 @@ public final class TelaVendaPassagens extends JFrame {
     }
 
     private LocalDate lerRetorno() {
-        String texto = campoRetorno.getText().trim();
-        if (texto.isEmpty()) return null;
-        try {
-            return LocalDate.parse(texto);
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Data de retorno deve estar no formato AAAA-MM-DD.");
-        }
+        if (!checkRetorno.isSelected()) return null;
+        Date data = (Date) campoRetorno.getValue();
+        return data.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
     private Pagamento criarPagamento(BigDecimal valor) {
@@ -650,10 +766,15 @@ public final class TelaVendaPassagens extends JFrame {
             return new PagamentoDinheiro(valor, campoMatricula.getText());
         }
         if (tipo == TipoPagamento.CREDITO) {
-            return new PagamentoCredito(valor, campoCartao.getText(), campoBandeira.getText(),
+            return new PagamentoCredito(valor, campoCartao.getText(), bandeiraSelecionada(),
                     (Integer) campoParcelas.getValue());
         }
-        return new PagamentoDebito(valor, campoCartao.getText(), campoBandeira.getText());
+        return new PagamentoDebito(valor, campoCartao.getText(), bandeiraSelecionada());
+    }
+
+    private String bandeiraSelecionada() {
+        Object bandeira = campoBandeira.getSelectedItem();
+        return bandeira == null ? "" : bandeira.toString().toUpperCase(Locale.ROOT);
     }
 
     private TipoPagamento tipoSelecionado() {
@@ -684,6 +805,48 @@ public final class TelaVendaPassagens extends JFrame {
         radioDinheiro.setBackground(dinheiro ? new Color(0xEBF4FF) : new Color(0xF7FAFC));
         radioCredito.setBackground(radioCredito.isSelected() ? new Color(0xEBF4FF) : new Color(0xF7FAFC));
         radioDebito.setBackground(radioDebito.isSelected() ? new Color(0xEBF4FF) : new Color(0xF7FAFC));
+        atualizarSimulacaoParcelas();
+    }
+
+    private void atualizarSimulacaoParcelas() {
+        simulacaoParcelas.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        simulacaoParcelas.setForeground(AZUL);
+        simulacaoParcelas.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xBEE3F8)),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+        simulacaoParcelas.setOpaque(true);
+        simulacaoParcelas.setBackground(new Color(0xEBF8FF));
+
+        BigDecimal valor = valorAtual();
+        if (valor.compareTo(BigDecimal.ZERO) <= 0) {
+            simulacaoParcelas.setText("Simulação: calcule o valor para ver as parcelas.");
+            return;
+        }
+        if (radioCredito.isSelected()) {
+            int parcelas = (Integer) campoParcelas.getValue();
+            BigDecimal valorParcela = valor.divide(BigDecimal.valueOf(parcelas), 2, RoundingMode.HALF_UP);
+            simulacaoParcelas.setText("Simulação: %dx de %s sem juros".formatted(parcelas, MOEDA.format(valorParcela)));
+        } else if (radioDebito.isSelected()) {
+            simulacaoParcelas.setText("Simulação: débito à vista em %s".formatted(MOEDA.format(valor)));
+        } else {
+            simulacaoParcelas.setText("Simulação: pagamento à vista em %s".formatted(MOEDA.format(valor)));
+        }
+    }
+
+    private BigDecimal valorAtual() {
+        String texto = campoValor.getText()
+                .replace("R$", "")
+                .replace("\u00A0", "")
+                .replace(" ", "")
+                .replace(".", "")
+                .replace(",", ".")
+                .trim();
+        if (texto.isBlank()) return BigDecimal.ZERO;
+        try {
+            return new BigDecimal(texto);
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
     }
 
     private void reiniciar() {
@@ -693,9 +856,14 @@ public final class TelaVendaPassagens extends JFrame {
         modeloVoos.clear();
         campoNome.setText("");
         campoDocumento.setText("");
-        campoRetorno.setText("");
+        checkRetorno.setSelected(false);
+        campoRetorno.setEnabled(false);
+        campoRetorno.setValue(Date.from(LocalDate.now().plusDays(7).atStartOfDay(ZoneId.systemDefault()).toInstant()));
         campoValor.setText("");
         campoCartao.setText("");
+        campoBandeira.setSelectedIndex(0);
+        campoParcelas.setValue(1);
+        atualizarSimulacaoParcelas();
         painelResumo.limpar();
         etapas.show(painelEtapas, "origem");
     }
@@ -727,6 +895,50 @@ public final class TelaVendaPassagens extends JFrame {
 
     public static void abrir() {
         SwingUtilities.invokeLater(() -> new TelaVendaPassagens().setVisible(true));
+    }
+
+    private final class BandeiraIcon implements Icon {
+        private final String texto;
+
+        private BandeiraIcon(String texto) {
+            this.texto = texto;
+        }
+
+        @Override
+        public int getIconWidth() {
+            return 58;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return 30;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            String nome = texto.toUpperCase(Locale.ROOT);
+            Color fundo = switch (nome) {
+                case "MASTERCARD" -> new Color(0x2D3748);
+                case "ELO" -> new Color(0x111827);
+                case "AMEX" -> new Color(0x2B6CB0);
+                default -> new Color(0x1A365D);
+            };
+            g2.setColor(fundo);
+            g2.fillRoundRect(x, y + 2, 54, 24, 8, 8);
+            if ("MASTERCARD".equals(nome)) {
+                g2.setColor(new Color(0xF56565));
+                g2.fillOval(x + 9, y + 7, 17, 17);
+                g2.setColor(new Color(0xECC94B));
+                g2.fillOval(x + 23, y + 7, 17, 17);
+            } else {
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
+                g2.drawString(nome.length() > 4 ? nome.substring(0, 4) : nome, x + 10, y + 18);
+            }
+            g2.dispose();
+        }
     }
 
     private final class PainelResumo extends JPanel {
@@ -778,18 +990,11 @@ public final class TelaVendaPassagens extends JFrame {
 
             g2.setColor(AZUL);
             g2.fillRect(0, 0, w, 86);
-            if (logo == null) {
-                g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 24));
-                g2.drawString("DJE AIRLINES", 24, 38);
-                g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                g2.drawString("CARTÃO DE EMBARQUE", 24, 60);
-            } else {
-                g2.drawImage(logo, 24, 8, 142, 70, null);
-                g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
-                g2.drawString("CARTÃO DE EMBARQUE", 178, 48);
-            }
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
+            g2.drawString("DJE AIRLINES", 24, 36);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            g2.drawString("CARTÃO DE EMBARQUE", 24, 60);
 
             g2.setColor(AZUL);
             g2.setFont(new Font("Segoe UI", Font.BOLD, 44));
