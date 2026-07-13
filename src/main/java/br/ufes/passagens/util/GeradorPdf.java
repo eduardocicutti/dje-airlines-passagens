@@ -23,7 +23,7 @@ public class GeradorPdf {
     private static final Color COR_LINHA_TRACEJADA = new Color(0xCB, 0xD5, 0xE0);
     private static final String FONTE_NORMAL = "C:/Windows/Fonts/arial.ttf";
     private static final String FONTE_NEGRITO = "C:/Windows/Fonts/arialbd.ttf";
-    private static final String LOGO = "/imagens/logo-dje.jpg";
+    private static final String LOGO = "/imagens/logo-dje.png";
     private static final Map<String, String> CIDADES = Map.of(
             "POA", "Porto Alegre",
             "CGH", "São Paulo",

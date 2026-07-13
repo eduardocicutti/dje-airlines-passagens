@@ -77,7 +77,7 @@ public final class TelaVendaPassagens extends JFrame {
     private static final Font FONTE = new Font("Segoe UI", Font.PLAIN, 14);
     private static final Font FONTE_NEGRITO = new Font("Segoe UI", Font.BOLD, 14);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final String LOGO = "/imagens/logo-dje.jpg";
+    private static final String LOGO = "/imagens/logo-dje.png";
 
     private static final Map<String, String> CIDADES = new HashMap<>();
     static {
