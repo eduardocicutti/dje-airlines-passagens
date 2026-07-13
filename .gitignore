@@ -1,0 +1,7 @@
+target/
+output/
+*.class
+application.properties
+src/main/resources/application.properties
+.idea/
+nbproject/private/
