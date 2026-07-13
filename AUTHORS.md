@@ -2,4 +2,4 @@
 
 - Eduardo Cicutti
 - Daniel Mendes
-- José Antônio da Silva
+- José Antônio dos Santos

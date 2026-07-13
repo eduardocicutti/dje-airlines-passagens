@@ -8,7 +8,7 @@ O projeto usa Java Swing para a interface, MySQL para persistencia, Maven para g
 
 - Eduardo Cicutti
 - Daniel Mendes
-- José Antônio da Silva
+- José Antônio dos Santos
 
 ## Funcionalidades
 
