@@ -25,7 +25,7 @@ O sistema já está integrado ao MySQL e possui:
 
 O checkpoint atual é a validação final pelo NetBeans e por uma venda de demonstração na interface.
 
-## Pré-requisitos pedidos pelo professor
+## Pré-requisitos
 
 1. Java JDK 17.
 2. Apache Maven (ou o Maven integrado ao NetBeans).
