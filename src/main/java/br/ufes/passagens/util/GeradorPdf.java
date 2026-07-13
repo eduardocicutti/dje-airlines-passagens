@@ -8,9 +8,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.text.Normalizer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 public class GeradorPdf {
 
@@ -23,6 +23,15 @@ public class GeradorPdf {
     private static final Color COR_LINHA_TRACEJADA = new Color(0xCB, 0xD5, 0xE0);
     private static final String FONTE_NORMAL = "C:/Windows/Fonts/arial.ttf";
     private static final String FONTE_NEGRITO = "C:/Windows/Fonts/arialbd.ttf";
+    private static final Map<String, String> CIDADES = Map.of(
+            "POA", "Porto Alegre",
+            "CGH", "São Paulo",
+            "GIG", "Rio de Janeiro",
+            "FOR", "Fortaleza",
+            "BSB", "Brasília",
+            "FLN", "Florianópolis",
+            "CNF", "Belo Horizonte",
+            "VIX", "Vitória");
 
     public static File gerarETicket(
             String nomePassageiro,
@@ -63,10 +72,8 @@ public class GeradorPdf {
 
             String siglaOrigem  = extrairSigla(origem);
             String siglaDestino = extrairSigla(destino);
-            String cidadeOrigem = textoPdf(extrairCidade(origem));
-            String cidadeDestino = textoPdf(extrairCidade(destino));
-            String nomePassageiroPdf = textoPdf(nomePassageiro);
-            String itinerarioPdf = textoPdf(itinerario);
+            String cidadeOrigem = CIDADES.getOrDefault(siglaOrigem, extrairCidade(origem));
+            String cidadeDestino = CIDADES.getOrDefault(siglaDestino, extrairCidade(destino));
 
             PdfPTable cabecalho = new PdfPTable(new float[]{3f, 2f});
             cabecalho.setWidthPercentage(100);
@@ -88,7 +95,7 @@ public class GeradorPdf {
             documento.add(rota);
 
             Paragraph cidades = new Paragraph(
-                    cidadeOrigem + " para " + cidadeDestino + " | " + itinerarioPdf,
+                    cidadeOrigem + " para " + cidadeDestino + " | " + itinerario,
                     fonte(10, false, COR_CINZA_LABEL));
             cidades.setAlignment(Element.ALIGN_CENTER);
             cidades.setSpacingAfter(16);
@@ -101,7 +108,7 @@ public class GeradorPdf {
             adicionarCampo(dados, "HORARIO", horarioVoo);
             adicionarCampo(dados, "PORTAO", portaoEmbarque);
             adicionarCampo(dados, "ASSENTO", assento);
-            adicionarCampo(dados, "PASSAGEIRO", nomePassageiroPdf);
+            adicionarCampo(dados, "PASSAGEIRO", nomePassageiro);
             adicionarCampo(dados, "VOO", codigoVoo);
             adicionarCampo(dados, "VALOR", valorTotal == null ? "N/D" : "R$ " + valorTotal);
             adicionarCampo(dados, "STATUS", "CONFIRMADO");
@@ -152,8 +159,13 @@ public class GeradorPdf {
     private static Font fonte(int tamanho, boolean negrito, Color cor) {
         String caminho = negrito ? FONTE_NEGRITO : FONTE_NORMAL;
         if (Files.isRegularFile(Path.of(caminho))) {
-            return FontFactory.getFont(caminho, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, tamanho,
-                    negrito ? Font.BOLD : Font.NORMAL, cor);
+            try {
+                BaseFont base = BaseFont.createFont(caminho, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                return new Font(base, tamanho, negrito ? Font.BOLD : Font.NORMAL, cor);
+            } catch (DocumentException | IOException e) {
+                return FontFactory.getFont(negrito ? FontFactory.HELVETICA_BOLD : FontFactory.HELVETICA,
+                        tamanho, cor);
+            }
         }
         return FontFactory.getFont(negrito ? FontFactory.HELVETICA_BOLD : FontFactory.HELVETICA,
                 tamanho, cor);
@@ -178,14 +190,4 @@ public class GeradorPdf {
         return aeroporto;
     }
 
-    private static String textoPdf(String texto) {
-        if (texto == null) {
-            return "";
-        }
-        return Normalizer.normalize(texto, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .replaceAll("[^\\p{ASCII}]", "")
-                .replace('ç', 'c')
-                .replace('Ç', 'C');
-    }
 }
