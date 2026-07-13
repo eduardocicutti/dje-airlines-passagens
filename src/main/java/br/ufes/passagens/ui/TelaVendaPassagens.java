@@ -33,6 +33,7 @@ import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.ListCellRenderer;
+import javax.swing.ImageIcon;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -52,6 +53,7 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -75,6 +77,7 @@ public final class TelaVendaPassagens extends JFrame {
     private static final Font FONTE = new Font("Segoe UI", Font.PLAIN, 14);
     private static final Font FONTE_NEGRITO = new Font("Segoe UI", Font.BOLD, 14);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final String LOGO = "/imagens/logo-dje.jpg";
 
     private static final Map<String, String> CIDADES = new HashMap<>();
     static {
@@ -95,6 +98,7 @@ public final class TelaVendaPassagens extends JFrame {
     private final CardLayout etapas = new CardLayout();
     private final JPanel painelEtapas = new JPanel(etapas);
     private final PainelResumo painelResumo = new PainelResumo();
+    private final Image logo = carregarLogo();
 
     private final JComboBox<Aeroporto> comboOrigem = new JComboBox<>();
     private final JComboBox<Aeroporto> comboDestino = new JComboBox<>();
@@ -182,20 +186,26 @@ public final class TelaVendaPassagens extends JFrame {
     private JPanel cabecalho() {
         JPanel topo = new JPanel(new BorderLayout());
         topo.setBackground(AZUL);
-        topo.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
+        topo.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
 
-        JLabel marca = new JLabel("DJE AIRLINES");
-        marca.setForeground(Color.WHITE);
-        marca.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        JLabel marca;
+        if (logo == null) {
+            marca = new JLabel("DJE AIRLINES");
+            marca.setForeground(Color.WHITE);
+            marca.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        } else {
+            Image ajustada = logo.getScaledInstance(188, 76, Image.SCALE_SMOOTH);
+            marca = new JLabel(new ImageIcon(ajustada));
+        }
 
         JLabel subtitulo = new JLabel("Venda de passagens aéreas");
         subtitulo.setForeground(new Color(0xBED5EF));
         subtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
-        JPanel textos = new JPanel(new GridLayout(2, 1));
+        JPanel textos = new JPanel(new BorderLayout(12, 0));
         textos.setOpaque(false);
-        textos.add(marca);
-        textos.add(subtitulo);
+        textos.add(marca, BorderLayout.WEST);
+        textos.add(subtitulo, BorderLayout.CENTER);
 
         JLabel ticket = new JLabel("E-TICKET");
         ticket.setForeground(Color.WHITE);
@@ -204,6 +214,11 @@ public final class TelaVendaPassagens extends JFrame {
         topo.add(textos, BorderLayout.WEST);
         topo.add(ticket, BorderLayout.EAST);
         return topo;
+    }
+
+    private Image carregarLogo() {
+        java.net.URL url = TelaVendaPassagens.class.getResource(LOGO);
+        return url == null ? null : new ImageIcon(url).getImage();
     }
 
     private JPanel etapaOrigemDestino() {
@@ -763,11 +778,18 @@ public final class TelaVendaPassagens extends JFrame {
 
             g2.setColor(AZUL);
             g2.fillRect(0, 0, w, 86);
-            g2.setColor(Color.WHITE);
-            g2.setFont(new Font("Segoe UI", Font.BOLD, 24));
-            g2.drawString("DJE AIRLINES", 24, 38);
-            g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            g2.drawString("CARTÃO DE EMBARQUE", 24, 60);
+            if (logo == null) {
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 24));
+                g2.drawString("DJE AIRLINES", 24, 38);
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                g2.drawString("CARTÃO DE EMBARQUE", 24, 60);
+            } else {
+                g2.drawImage(logo, 24, 8, 142, 70, null);
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                g2.drawString("CARTÃO DE EMBARQUE", 178, 48);
+            }
 
             g2.setColor(AZUL);
             g2.setFont(new Font("Segoe UI", Font.BOLD, 44));

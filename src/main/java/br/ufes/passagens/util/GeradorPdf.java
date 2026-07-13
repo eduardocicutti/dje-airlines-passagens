@@ -23,6 +23,7 @@ public class GeradorPdf {
     private static final Color COR_LINHA_TRACEJADA = new Color(0xCB, 0xD5, 0xE0);
     private static final String FONTE_NORMAL = "C:/Windows/Fonts/arial.ttf";
     private static final String FONTE_NEGRITO = "C:/Windows/Fonts/arialbd.ttf";
+    private static final String LOGO = "/imagens/logo-dje.jpg";
     private static final Map<String, String> CIDADES = Map.of(
             "POA", "Porto Alegre",
             "CGH", "São Paulo",
@@ -77,7 +78,7 @@ public class GeradorPdf {
 
             PdfPTable cabecalho = new PdfPTable(new float[]{3f, 2f});
             cabecalho.setWidthPercentage(100);
-            PdfPCell marca = criarCelula("DJE AIRLINES\nCARTAO DE EMBARQUE", 18, true, COR_BRANCO, COR_AZUL_MARINHO);
+            PdfPCell marca = celulaLogo();
             marca.setPadding(12);
             PdfPCell ticket = criarCelula("E-TICKET\n" + numTicket, 12, true, COR_BRANCO, COR_AZUL_MARINHO);
             ticket.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -153,6 +154,21 @@ public class GeradorPdf {
         celula.setBorderColor(COR_LINHA_TRACEJADA);
         celula.setBackgroundColor(corFundo);
         celula.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        return celula;
+    }
+
+    private static PdfPCell celulaLogo() throws IOException, BadElementException {
+        java.net.URL url = GeradorPdf.class.getResource(LOGO);
+        if (url == null) {
+            return criarCelula("DJE AIRLINES\nCARTAO DE EMBARQUE", 18, true, COR_BRANCO, COR_AZUL_MARINHO);
+        }
+        Image logo = Image.getInstance(url);
+        logo.scaleToFit(150, 54);
+        PdfPCell celula = new PdfPCell(logo, false);
+        celula.setBorderColor(COR_LINHA_TRACEJADA);
+        celula.setBackgroundColor(COR_AZUL_MARINHO);
+        celula.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        celula.setHorizontalAlignment(Element.ALIGN_LEFT);
         return celula;
     }
 
