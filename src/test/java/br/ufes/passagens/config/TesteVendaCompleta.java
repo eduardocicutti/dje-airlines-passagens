@@ -31,7 +31,7 @@ public final class TesteVendaCompleta {
                 .orElseThrow(() -> new IllegalStateException("Nenhum assento disponivel."));
 
         Passageiro passageiro = new Passageiro(null,
-                "Venda Demonstracao Codex",
+                "Passageiro Demonstração",
                 "DEMO" + System.currentTimeMillis());
         Passagem passagem = new Passagem(voo, passageiro, assento.codigo(), null);
         new CalculadoraPreco(Clock.systemDefaultZone(), new CalendarioFeriadosFixos())

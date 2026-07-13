@@ -55,8 +55,42 @@ public final class GerenciadorDados {
     }
 
     public List<Aeroporto> obterAeroportosPrincipais() throws SQLException {
-        String sql = "SELECT codigo_iata, cidade, nome FROM aeroportos "
-                + "WHERE ativo = TRUE ORDER BY cidade";
+        String sql = """
+                SELECT DISTINCT a.codigo_iata, a.cidade, a.nome
+                FROM aeroportos a
+                WHERE a.ativo = TRUE
+                  AND (
+                    EXISTS (
+                      SELECT 1
+                      FROM voos v
+                      JOIN voo_trechos vt ON vt.voo_id = v.id
+                      JOIN rotas r ON r.id = vt.rota_id
+                      WHERE v.estado = 'DISPONIVEL'
+                        AND v.data_voo >= CURDATE()
+                        AND vt.ordem = (
+                          SELECT MIN(vt2.ordem)
+                          FROM voo_trechos vt2
+                          WHERE vt2.voo_id = v.id
+                        )
+                        AND r.origem_id = a.id
+                    )
+                    OR EXISTS (
+                      SELECT 1
+                      FROM voos v
+                      JOIN voo_trechos vt ON vt.voo_id = v.id
+                      JOIN rotas r ON r.id = vt.rota_id
+                      WHERE v.estado = 'DISPONIVEL'
+                        AND v.data_voo >= CURDATE()
+                        AND vt.ordem = (
+                          SELECT MAX(vt2.ordem)
+                          FROM voo_trechos vt2
+                          WHERE vt2.voo_id = v.id
+                        )
+                        AND r.destino_id = a.id
+                    )
+                  )
+                ORDER BY a.cidade
+                """;
         List<Aeroporto> aeroportos = new ArrayList<>();
         try (ConexaoMySQL banco = new ConexaoMySQL(configuracao);
              PreparedStatement comando = banco.Conectar().prepareStatement(sql);

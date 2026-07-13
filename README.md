@@ -1,8 +1,8 @@
-# DJE Airlines - Venda de Passagens Aereas
+# DJE Airlines - Venda de Passagens Aéreas
 
-Sistema desktop em Java para venda de passagens aereas, desenvolvido como trabalho final da disciplina de Programacao Orientada a Objetos.
+Sistema desktop em Java para venda de passagens aéreas, desenvolvido como trabalho final da disciplina de Programação Orientada a Objetos.
 
-O projeto usa Java Swing para a interface, MySQL para persistencia, Maven para gerenciamento de dependencias e OpenPDF para geracao do e-ticket.
+O projeto usa Java Swing para a interface, MySQL para persistência, Maven para gerenciamento de dependências e OpenPDF para geração do e-ticket.
 
 ## Autores
 
@@ -12,19 +12,19 @@ O projeto usa Java Swing para a interface, MySQL para persistencia, Maven para g
 
 ## Funcionalidades
 
-- Cadastro inicial de aeroportos, rotas, voos, conexoes e assentos via script SQL.
-- Consulta de voos disponiveis por origem e destino.
+- Cadastro inicial de aeroportos, rotas, voos, conexões e assentos via script SQL.
+- Consulta de voos disponíveis por origem e destino.
 - Fluxo Swing em cinco etapas:
   - origem e destino;
-  - voo e horario;
+  - voo e horário;
   - assento;
   - passageiro e pagamento;
   - e-ticket.
-- Calculo de preco com base nas regras fornecidas no enunciado.
-- Pagamento em dinheiro, credito ou debito, com heranca e polimorfismo.
-- Gravacao completa da venda em banco MySQL.
+- Cálculo de preço com base nas regras fornecidas no enunciado.
+- Pagamento em dinheiro, crédito ou débito, com herança e polimorfismo.
+- Gravação completa da venda em banco MySQL.
 - Bloqueio de venda duplicada para o mesmo assento.
-- Geracao de PDF do e-ticket.
+- Geração de PDF do e-ticket.
 - Envio do e-ticket em uma tarefa paralela.
 
 ## Tecnologias
@@ -59,7 +59,7 @@ src/test/java/br/ufes/passagens/
 
 O banco usado pelo sistema se chama `dje_airlines`.
 
-As principais tabelas sao:
+As principais tabelas são:
 
 - `aeroportos`
 - `rotas`
@@ -81,7 +81,7 @@ SOURCE caminho/do/projeto/database/seed.sql;
 
 O script inicial cadastra 8 aeroportos, 12 rotas, 3 voos e 180 assentos.
 
-## Configuracao Local
+## Configuração Local
 
 Copie o arquivo de exemplo:
 
@@ -95,7 +95,7 @@ para:
 src/main/resources/application.properties
 ```
 
-Depois ajuste os dados de conexao:
+Depois ajuste os dados de conexão:
 
 ```properties
 db.url=jdbc:mysql://localhost:3306/dje_airlines?useSSL=false&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true
@@ -105,7 +105,7 @@ db.password=sua-senha
 
 O arquivo `application.properties` fica fora do Git por conter senha local.
 
-## Execucao
+## Execução
 
 Para compilar:
 
@@ -113,15 +113,15 @@ Para compilar:
 mvn clean package
 ```
 
-Para abrir a aplicacao:
+Para abrir a aplicação:
 
 ```powershell
 mvn exec:java "-Dexec.mainClass=br.ufes.App"
 ```
 
-Tambem e possivel executar a classe `br.ufes.App` diretamente pelo NetBeans.
+Também é possível executar a classe `br.ufes.App` diretamente pelo NetBeans.
 
-## Rotas de Demonstracao
+## Rotas de Demonstração
 
 O `seed.sql` inclui os seguintes voos:
 
@@ -129,27 +129,33 @@ O `seed.sql` inclui os seguintes voos:
 - `DJE202`: `CGH -> VIX`
 - `DJE303`: `CGH -> FOR`
 
-Para pagamento em dinheiro, a matricula inicial cadastrada e `1001`.
+Para pagamento em dinheiro, a matrícula inicial cadastrada é `1001`.
 
 ## Testes
 
-Para executar os testes unitarios:
+Para executar os testes unitários:
 
 ```powershell
 mvn test
 ```
 
-Classes auxiliares para validacao manual:
+Classes auxiliares para validação manual:
 
 - `TesteConexao`
 - `TesteConsultaVoos`
 - `TesteVendaCompleta`
 - `TesteResumoBanco`
 
-## Observacoes
+Para executar uma validação manual pelo Maven:
 
-- As distancias seguem os valores fornecidos no enunciado.
-- Porto Alegre e Rio de Janeiro estao cadastrados, mas nao possuem rotas comerciais iniciais porque o material base nao fornece suas distancias.
-- O sistema nao salva CVV nem numero completo de cartao.
+```powershell
+mvn test-compile exec:java "-Dexec.mainClass=br.ufes.passagens.config.TesteConexao" "-Dexec.classpathScope=test"
+```
+
+## Observações
+
+- As distâncias seguem os valores fornecidos no enunciado.
+- Porto Alegre e Rio de Janeiro estão cadastrados no banco, mas não aparecem na seleção comercial inicial porque o material base não fornece suas distâncias para cálculo de preço.
+- O sistema não salva CVV nem número completo de cartão.
 - Os PDFs gerados ficam em `output/etickets/`.
-- O envio de e-ticket usa `DJE_SERVER_DIR` quando configurado; caso contrario usa `output/servidor/`.
+- O envio de e-ticket usa `DJE_SERVER_DIR` quando configurado; caso contrário usa `output/servidor/`.
