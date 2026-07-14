@@ -1,8 +1,20 @@
--- DJE Airlines - dados iniciais fornecidos pelo professor
--- Execute depois de schema.sql.
-
 USE dje_airlines;
 
+-- Limpeza da base
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE etickets;
+TRUNCATE TABLE vendas;
+TRUNCATE TABLE pagamentos;
+TRUNCATE TABLE passageiros;
+TRUNCATE TABLE assentos;
+TRUNCATE TABLE voo_trechos;
+TRUNCATE TABLE voos;
+TRUNCATE TABLE rotas;
+TRUNCATE TABLE funcionarios;
+TRUNCATE TABLE aeroportos;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Aeroportos
 INSERT INTO aeroportos (codigo_iata, cidade, nome) VALUES
 ('POA', 'Porto Alegre', 'Aeroporto Internacional Salgado Filho'),
 ('CGH', 'São Paulo', 'Aeroporto de Congonhas'),
@@ -11,13 +23,11 @@ INSERT INTO aeroportos (codigo_iata, cidade, nome) VALUES
 ('BSB', 'Brasília', 'Aeroporto Internacional de Brasília'),
 ('FLN', 'Florianópolis', 'Aeroporto Internacional de Florianópolis'),
 ('CNF', 'Belo Horizonte', 'Aeroporto Internacional de Confins'),
-('VIX', 'Vitória', 'Aeroporto de Vitória')
-ON DUPLICATE KEY UPDATE cidade = VALUES(cidade), nome = VALUES(nome), ativo = TRUE;
+('VIX', 'Vitória', 'Aeroporto de Vitória');
 
--- As seis distâncias abaixo reproduzem exatamente o PDF do professor.
--- Cada trecho é cadastrado nos dois sentidos.
+-- Distâncias do enunciado
 INSERT INTO rotas (origem_id, destino_id, distancia_milhas)
-SELECT o.id, d.id, dados.milhas
+SELECT origem.id, destino.id, dados.milhas
 FROM (
     SELECT 'FLN' origem, 'CGH' destino, 304 milhas UNION ALL
     SELECT 'CGH', 'FLN', 304 UNION ALL
@@ -32,42 +42,103 @@ FROM (
     SELECT 'FLN', 'BSB', 816 UNION ALL
     SELECT 'BSB', 'FLN', 816
 ) dados
-JOIN aeroportos o ON o.codigo_iata = dados.origem
-JOIN aeroportos d ON d.codigo_iata = dados.destino
-ON DUPLICATE KEY UPDATE distancia_milhas = VALUES(distancia_milhas), ativa = TRUE;
+JOIN aeroportos origem ON origem.codigo_iata = dados.origem
+JOIN aeroportos destino ON destino.codigo_iata = dados.destino;
 
-INSERT INTO funcionarios (matricula, nome, ativo) VALUES
-('1001', 'Funcionário de Demonstração', TRUE)
-ON DUPLICATE KEY UPDATE nome = VALUES(nome), ativo = TRUE;
+INSERT INTO funcionarios (matricula, nome, ativo)
+VALUES ('1001', 'Atendente 1001', TRUE);
 
--- Voos futuros de demonstração. As datas são relativas para o seed continuar utilizável.
-INSERT INTO voos (codigo, data_voo, horario, portao, capacidade, estado) VALUES
-('DJE101', DATE_ADD(CURDATE(), INTERVAL 7 DAY), '08:30:00', 'A1', 60, 'DISPONIVEL'),
-('DJE202', DATE_ADD(CURDATE(), INTERVAL 12 DAY), '14:00:00', 'B3', 60, 'DISPONIVEL'),
-('DJE303', DATE_ADD(CURDATE(), INTERVAL 21 DAY), '18:30:00', 'C2', 60, 'DISPONIVEL')
-ON DUPLICATE KEY UPDATE horario = VALUES(horario), portao = VALUES(portao), capacidade = VALUES(capacidade);
+-- Itinerários diretos e com conexão
+CREATE TEMPORARY TABLE itinerarios (
+    id TINYINT UNSIGNED PRIMARY KEY,
+    origem CHAR(3) NOT NULL,
+    destino CHAR(3) NOT NULL,
+    trecho1_origem CHAR(3) NOT NULL,
+    trecho1_destino CHAR(3) NOT NULL,
+    trecho2_origem CHAR(3),
+    trecho2_destino CHAR(3)
+);
 
--- DJE101: FLN -> CGH -> BSB (com conexão em São Paulo).
-INSERT INTO voo_trechos (voo_id, rota_id, ordem)
-SELECT v.id, r.id, dados.ordem
-FROM (
-    SELECT 'DJE101' codigo, 'FLN' origem, 'CGH' destino, 1 ordem UNION ALL
-    SELECT 'DJE101', 'CGH', 'BSB', 2 UNION ALL
-    SELECT 'DJE202', 'CGH', 'VIX', 1 UNION ALL
-    SELECT 'DJE303', 'CGH', 'FOR', 1
-) dados
-JOIN voos v ON v.codigo = dados.codigo
-JOIN aeroportos o ON o.codigo_iata = dados.origem
-JOIN aeroportos d ON d.codigo_iata = dados.destino
-JOIN rotas r ON r.origem_id = o.id AND r.destino_id = d.id
-ON DUPLICATE KEY UPDATE rota_id = VALUES(rota_id);
+INSERT INTO itinerarios VALUES
+(1,  'BSB', 'CNF', 'BSB', 'CGH', 'CGH', 'CNF'),
+(2,  'BSB', 'CGH', 'BSB', 'CGH', NULL,  NULL),
+(3,  'BSB', 'FLN', 'BSB', 'FLN', NULL,  NULL),
+(4,  'BSB', 'FOR', 'BSB', 'CGH', 'CGH', 'FOR'),
+(5,  'BSB', 'VIX', 'BSB', 'CGH', 'CGH', 'VIX'),
+(6,  'CNF', 'BSB', 'CNF', 'CGH', 'CGH', 'BSB'),
+(7,  'CNF', 'CGH', 'CNF', 'CGH', NULL,  NULL),
+(8,  'CNF', 'FLN', 'CNF', 'CGH', 'CGH', 'FLN'),
+(9,  'CNF', 'FOR', 'CNF', 'CGH', 'CGH', 'FOR'),
+(10, 'CNF', 'VIX', 'CNF', 'CGH', 'CGH', 'VIX'),
+(11, 'CGH', 'BSB', 'CGH', 'BSB', NULL,  NULL),
+(12, 'CGH', 'CNF', 'CGH', 'CNF', NULL,  NULL),
+(13, 'CGH', 'FLN', 'CGH', 'FLN', NULL,  NULL),
+(14, 'CGH', 'FOR', 'CGH', 'FOR', NULL,  NULL),
+(15, 'CGH', 'VIX', 'CGH', 'VIX', NULL,  NULL),
+(16, 'FLN', 'BSB', 'FLN', 'BSB', NULL,  NULL),
+(17, 'FLN', 'CNF', 'FLN', 'CGH', 'CGH', 'CNF'),
+(18, 'FLN', 'CGH', 'FLN', 'CGH', NULL,  NULL),
+(19, 'FLN', 'FOR', 'FLN', 'CGH', 'CGH', 'FOR'),
+(20, 'FLN', 'VIX', 'FLN', 'CGH', 'CGH', 'VIX'),
+(21, 'FOR', 'BSB', 'FOR', 'CGH', 'CGH', 'BSB'),
+(22, 'FOR', 'CNF', 'FOR', 'CGH', 'CGH', 'CNF'),
+(23, 'FOR', 'CGH', 'FOR', 'CGH', NULL,  NULL),
+(24, 'FOR', 'FLN', 'FOR', 'CGH', 'CGH', 'FLN'),
+(25, 'FOR', 'VIX', 'FOR', 'CGH', 'CGH', 'VIX'),
+(26, 'VIX', 'BSB', 'VIX', 'CGH', 'CGH', 'BSB'),
+(27, 'VIX', 'CNF', 'VIX', 'CGH', 'CGH', 'CNF'),
+(28, 'VIX', 'CGH', 'VIX', 'CGH', NULL,  NULL),
+(29, 'VIX', 'FLN', 'VIX', 'CGH', 'CGH', 'FLN'),
+(30, 'VIX', 'FOR', 'VIX', 'CGH', 'CGH', 'FOR');
 
--- Gera A1 até J6 para cada voo de 60 lugares, sem duplicar em nova execução.
-INSERT INTO assentos (voo_id, codigo, estado)
-SELECT v.id,
-       CONCAT(CHAR(65 + FLOOR(n.valor / 6)), 1 + MOD(n.valor, 6)),
+CREATE TEMPORARY TABLE horarios (
+    serie TINYINT UNSIGNED PRIMARY KEY,
+    dias_antecedencia TINYINT UNSIGNED NOT NULL,
+    horario TIME NOT NULL
+);
+
+INSERT INTO horarios VALUES
+(1, 7,  '08:00:00'),
+(2, 22, '16:00:00');
+
+-- Dois voos por origem e destino
+INSERT INTO voos (codigo, data_voo, horario, portao, capacidade, estado)
+SELECT CONCAT('DJE', LPAD(it.id, 2, '0'), h.serie),
+       DATE_ADD(CURDATE(), INTERVAL (h.dias_antecedencia + MOD(it.id - 1, 4)) DAY),
+       ADDTIME(h.horario, SEC_TO_TIME(MOD(it.id - 1, 3) * 1800)),
+       CONCAT(CHAR(65 + MOD(it.id - 1, 3)), 1 + MOD(it.id - 1, 6)),
+       60,
        'DISPONIVEL'
-FROM voos v
+FROM itinerarios it
+CROSS JOIN horarios h;
+
+-- Primeiro trecho
+INSERT INTO voo_trechos (voo_id, rota_id, ordem)
+SELECT voo.id, rota.id, 1
+FROM itinerarios it
+CROSS JOIN horarios h
+JOIN voos voo ON voo.codigo = CONCAT('DJE', LPAD(it.id, 2, '0'), h.serie)
+JOIN aeroportos origem ON origem.codigo_iata = it.trecho1_origem
+JOIN aeroportos destino ON destino.codigo_iata = it.trecho1_destino
+JOIN rotas rota ON rota.origem_id = origem.id AND rota.destino_id = destino.id;
+
+-- Segundo trecho
+INSERT INTO voo_trechos (voo_id, rota_id, ordem)
+SELECT voo.id, rota.id, 2
+FROM itinerarios it
+CROSS JOIN horarios h
+JOIN voos voo ON voo.codigo = CONCAT('DJE', LPAD(it.id, 2, '0'), h.serie)
+JOIN aeroportos origem ON origem.codigo_iata = it.trecho2_origem
+JOIN aeroportos destino ON destino.codigo_iata = it.trecho2_destino
+JOIN rotas rota ON rota.origem_id = origem.id AND rota.destino_id = destino.id
+WHERE it.trecho2_origem IS NOT NULL;
+
+-- Assentos A1 a J6
+INSERT INTO assentos (voo_id, codigo, estado)
+SELECT voo.id,
+       CONCAT(CHAR(65 + FLOOR(numero.valor / 6)), 1 + MOD(numero.valor, 6)),
+       'DISPONIVEL'
+FROM voos voo
 JOIN (
     SELECT unidade.n + dezena.n * 10 AS valor
     FROM
@@ -76,5 +147,7 @@ JOIN (
     CROSS JOIN
       (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
        UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) dezena
-) n ON n.valor < v.capacidade
-ON DUPLICATE KEY UPDATE codigo = VALUES(codigo);
+) numero ON numero.valor < voo.capacidade;
+
+DROP TEMPORARY TABLE horarios;
+DROP TEMPORARY TABLE itinerarios;

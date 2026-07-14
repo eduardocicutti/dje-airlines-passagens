@@ -21,18 +21,18 @@ public final class TesteVendaCompleta {
         GerenciadorDados dados = new GerenciadorDados();
         List<Voo> voos = dados.obterVoosDisponiveis("FLN", "BSB");
         if (voos.isEmpty()) {
-            throw new IllegalStateException("Nenhum voo disponivel para FLN -> BSB.");
+            throw new IllegalStateException("Nenhum voo disponível para FLN -> BSB.");
         }
 
         Voo voo = voos.get(0);
         AssentoResumo assento = dados.obterAssentos(voo.getId()).stream()
                 .filter(AssentoResumo::disponivel)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Nenhum assento disponivel."));
+                .orElseThrow(() -> new IllegalStateException("Nenhum assento disponível."));
 
         Passageiro passageiro = new Passageiro(null,
-                "Passageiro Demonstração",
-                "DEMO" + System.currentTimeMillis());
+                "Passageiro Teste",
+                "TESTE" + System.currentTimeMillis());
         Passagem passagem = new Passagem(voo, passageiro, assento.codigo(), null);
         new CalculadoraPreco(Clock.systemDefaultZone(), new CalendarioFeriadosFixos())
                 .calcularValorTotal(passagem);

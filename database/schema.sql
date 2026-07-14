@@ -1,7 +1,7 @@
--- DJE Airlines - estrutura MySQL
--- Execute no MySQL Command Line Client com: SOURCE C:/caminho/database/schema.sql;
+-- Estrutura do banco
+DROP DATABASE IF EXISTS dje_airlines;
 
-CREATE DATABASE IF NOT EXISTS dje_airlines
+CREATE DATABASE dje_airlines
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_0900_ai_ci;
 
